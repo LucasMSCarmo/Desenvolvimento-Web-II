@@ -1,0 +1,113 @@
+const readline = require('readline');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+function ask(question) {
+    return new Promise((resolve) => {
+        rl.question(question, (answer) => {
+            resolve(answer);
+        });
+    });
+}
+
+async function main() {
+    let repetir;
+    const codigos = []
+    let valorTotal = {"SUDESTE":0, "SUL":0, "CENTRO-OESTE":0}
+    let maisCaroCodigo = ''
+    let maisCaroValor = 0
+    let maisBaratoCodigo = ''
+    let maisBaratoValor = 0
+    do {
+        let codigo = String(await ask("Código do pedido: "));
+        if (codigo in codigos){
+            console.log("O código já está no sistema, digite outro");
+            continue;
+        }
+        codigos.push(codigo);
+        let km = parseFloat(await ask("Distância (em km): "));
+        let litro = parseFloat(await ask("Valor do litro de combustível: "));
+        let qtd = parseInt(await ask("Quantidade de peças: "));
+        let regiao;
+        do{
+            if (regiao !== undefined){
+                console.log("Região inválida, escolha entre Sudeste, Sul, Centro-Oeste")
+            }
+            regiao = String(await ask("Região (Sudeste, Sul, Centro-Oeste): ")).toUpperCase();
+        }while (!["SUDESTE", "SUL", "CENTRO-OESTE"].includes(regiao));
+        let rastreamento = (await ask("Deseja rastreamento? (S/N): ")).toUpperCase() === "S";
+
+        let valorPorPeca;
+        switch (regiao) {
+            case "SUDESTE":
+                valorPorPeca = 1.2;
+                break;
+            case "SUL":
+                valorPorPeca = 1.3;
+                break;
+            case "CENTRO-OESTE":
+                valorPorPeca = 1.5;
+                break;
+        }
+
+        let valorFrete;
+        if (qtd > 1000) {
+            valorFrete = 1000 * valorPorPeca + (qtd - 1000) * valorPorPeca * 0.88;
+        } else {
+            valorFrete = qtd * valorPorPeca;
+        }
+
+        let valorKm = km * litro;
+        let valorRastreamento = rastreamento ? 200 : 0;
+        let total = valorFrete + valorKm + valorRastreamento;
+
+        valorTotal[regiao] += total;
+        if (maisBaratoCodigo == '' || maisBaratoValor > total){
+            maisBaratoCodigo = codigo
+            maisBaratoValor = total
+        }
+        if (maisCaroCodigo == '' || maisCaroValor < total){
+            maisCaroCodigo = codigo
+            maisCaroValor = total
+        }
+
+        console.log(
+            `Valor do frete pelas peças: R$ ${valorFrete.toFixed(2)}\n`+
+            `Valor do frete por km: R$ ${valorKm.toFixed(2)}\n`+
+            `Taxa de rastreamento: R$ ${valorRastreamento.toFixed(2)}\n`+
+            `Total do frete: R$ ${total.toFixed(2)}\n`
+        );
+
+        repetir = (await ask("Deseja calcular outro frete? (S/N): ")).toUpperCase();
+    } while (repetir === "S");
+
+    let pedidos = 0
+    for (const codigo of codigos) {
+        pedidos = pedidos + 1
+    }
+    let todo = 0
+    for (const regiao in valorTotal) {
+        if (Object.prototype.hasOwnProperty.call(valorTotal, regiao)) {
+            todo += valorTotal[regiao];
+        }
+    }
+    console.log(
+        `Total de pedidos: ${pedidos}\n`+
+        `Valor médio por produto: R$${(todo/pedidos).toFixed(2)}\n`
+    )
+    console.log(`Valor total por região:\n`)
+    for (const [regiao, valor] of Object.entries(valorTotal)) {
+        console.log(`${regiao}: R$${valor.toFixed(2)}\n`);
+    }
+    console.log(
+        `Pedido mais caro:\n`+
+        `Código: ${maisBaratoCodigo}    Valor: R$${maisBaratoValor.toFixed(2)}\n`+
+        `Pedido mais barato:\n`+
+        `Código: ${maisCaroCodigo}    Valor: R$${maisCaroValor.toFixed(2)}`)
+    
+    rl.close();
+}
+main();
